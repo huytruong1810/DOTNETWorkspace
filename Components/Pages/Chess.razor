@@ -1,0 +1,126 @@
+@page "/Chess"
+@using DOTNETWorkspace.Components.Models
+@rendermode InteractiveServer
+
+<PageTitle>Chess</PageTitle>
+
+<style>
+.chess-board { display: inline-block; border: 2px solid #333; }
+.board-row { display: flex; }
+.board-cell {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.light-square { background-color: #f0d9b5; opacity: 0.9;} 
+.light-square:hover { opacity: 1;}
+.dark-square { background-color: #b58863; opacity: 0.9;} 
+.dark-square:hover { opacity: 1;}
+.valid-move { background-color: green !important; opacity: 0.8; } 
+.valid-move:hover { opacity: 0.9;}
+.valid-capture { background-color: red !important; opacity: 0.8; } 
+.valid-capture:hover { opacity: 0.9;}
+.piece { font-size: 2em; }
+</style>
+
+<div class="chess-board">
+    @for (var row = 0; row < Board.Rows; row++)
+    {
+        <div class="board-row">
+            @for (var col = 0; col < Board.Cols; col++)
+            {
+                var squareColor = (row + col) % 2 == 0 ? "light-square" : "dark-square";
+                var highlightClass = 
+                    _moveToPositions is not null && _capturePositions is not null
+                    ? _moveToPositions.Contains((row, col)) 
+                        ? "valid-move" 
+                        : _capturePositions.Contains((row, col)) 
+                            ? "valid-capture" 
+                            : "" 
+                    : "";
+                var row1 = row;
+                var col1 = col;
+                <div class="board-cell @squareColor @highlightClass" @onclick="() => OnSquareClick(row1, col1)">
+                    @if (_board.IsOccupied(row, col))
+                    {
+                        <span class="piece" >@_board.Symbol(row, col)</span>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (_gameOver)
+{
+    if (_isWhiteTurn) { <h3>Black Wins</h3> }
+    else { <h3>White Wins</h3> }
+    <button @onclick="ResetGame">Reset Game</button>
+}
+else
+{
+    if (_isWhiteTurn) { <h3>White's Turn</h3> }
+    else { <h3>Black's Turn</h3> }
+}
+
+<div>
+    <h3>Captured Pieces</h3>
+    <div class="board-row">
+        @foreach (var piece in _board.CapturedPieces)
+        {
+            <span class="piece" >@piece.GetSymbol()</span>
+        }
+    </div>
+</div>
+
+@code {
+    private static Board _board = new();
+    private static int _prevRow;
+    private static int _prevCol;
+    private static List<(int, int)> _moveToPositions = [];
+    private static List<(int, int)> _capturePositions = [];
+    private static bool _isWhiteTurn = true;
+    private static bool _moveMode;
+    private static bool _gameOver = false;
+
+    private void OnSquareClick(int row, int col)
+    {
+        if (!_moveMode) // User wants to check the movability of the piece
+        {
+            if (!_board.IsOccupied(row, col)) return; // Only piece can move
+            (_moveToPositions, _capturePositions) = _board.ValidNextPositions(row, col, _isWhiteTurn);
+            if (_moveToPositions.Count == 0 && _capturePositions.Count == 0) return; // No valid move to make
+            (_prevRow, _prevCol) = (row, col);
+            _moveMode = true;
+        }
+        else // User decides to move the piece, enter here guaranteed populated list(s) of moves
+        {
+            if (_moveToPositions.Contains((row, col)))
+            {
+                _board.PlacePiece(_board.RemovePiece(_prevRow, _prevCol), row, col);
+                if (_board.GetIfIsPawn(row, col) is Pawn pawn1) pawn1.IsFirstMove = false;
+                _isWhiteTurn = !_isWhiteTurn;
+            }
+            else if (_capturePositions.Contains((row, col)))
+            {
+                _board.CapturedPieces.Add(_board.RemovePiece(row, col)!); // Only reach here if enemy piece is present
+                _board.PlacePiece(_board.RemovePiece(_prevRow, _prevCol), row, col);
+                if (_board.GetIfIsPawn(row, col) is Pawn pawn1) pawn1.IsFirstMove = false;
+                _isWhiteTurn = !_isWhiteTurn;
+            }
+            // If conditions above are not met, user clicks away to try another piece
+            _moveToPositions.Clear();
+            _capturePositions.Clear();
+            _moveMode = false;
+        }
+    }
+
+    private void ResetGame()
+    {
+        _board = new Board();
+        _isWhiteTurn = true;
+    }
+}
