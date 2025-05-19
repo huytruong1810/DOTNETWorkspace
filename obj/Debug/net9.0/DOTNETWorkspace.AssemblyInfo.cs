@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DOTNETWorkspace")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9aca06dcd40545ee69433561981ad43b904bcfd6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+53275631871e9310bb8de27dcf898f3c1cb48097")]
 [assembly: System.Reflection.AssemblyProductAttribute("DOTNETWorkspace")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DOTNETWorkspace")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
