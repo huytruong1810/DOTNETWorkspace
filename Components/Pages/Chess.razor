@@ -5,24 +5,26 @@
 <PageTitle>Chess</PageTitle>
 
 <style>
+ul { list-style: none; }
+li { display: inline-block; margin-right: 10px; }
 .chess-board { display: inline-block; }
-.flex-row { display: flex; align-items: center; justify-content: center;}
+.flex-row { display: flex; align-items: center; justify-content: center; }
 .board-cell {
-    width: 60px;
-    height: 60px;
+    width: 3em;
+    height: 3em;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
 }
-.light-square { background-color: #f0d9b5; opacity: 0.9;} 
-.light-square:hover { opacity: 1;}
-.dark-square { background-color: #b58863; opacity: 0.9;} 
-.dark-square:hover { opacity: 1;}
-.valid-move { border: .5em green inset; opacity: 0.8; } 
-.valid-move:hover { opacity: 0.9;}
-.valid-capture { border: .5em red inset; opacity: 0.8; } 
-.valid-capture:hover { opacity: 0.9;}
+.light-square { background-color: #f0d9b5; opacity: 0.9; } 
+.light-square:hover { opacity: 1; }
+.dark-square { background-color: #b58863; opacity: 0.9; } 
+.dark-square:hover { opacity: 1; }
+.valid-move { border: .25em green inset; opacity: 0.8; } 
+.valid-move:hover { opacity: 0.9; }
+.valid-capture { border: .25em red inset; opacity: 0.8; } 
+.valid-capture:hover { opacity: 0.9; }
 .piece { font-size: 2em; }
 </style>
 
@@ -35,27 +37,26 @@
             if (_isWhiteTurn)
             {
                 _blackPoints++;
-                <p class="lead">● +1</p>
+                <p>● +1</p>
             }
             else
             {
                 _whitePoints++;
-                <p class="lead">□ +1</p>
+                <p>□ +1</p>
             }
-            <p class="text-body-secondary">you can keep playing but won't affect points</p>
+            <p class="text-body-secondary">click ^ for a fresh board, you can keep playing this board but it won't affect points</p>
 
             _gameOver = false;
         }
         else
         {
-            if (_isWhiteTurn)
+            <ul>
+            @foreach (var move in _algebraicHistory.Skip(Math.Max(0, _algebraicHistory.Count - 5)))
             {
-                <h3 class="display-6">□</h3>
+                <li class="text-body-secondary">@move</li>
             }
-            else
-            {
-                <h3 class="display-6">●</h3>
-            }
+            <li style="font-size: 2em;">@(_isWhiteTurn ? "□" : "●")</li>
+            </ul>
         }
     </div>
     
@@ -93,10 +94,10 @@
             }
         </div>
 
-        <div class="col-2 flex-row">
+        <div class="col-2 d-flex flex-column align-items-center">
             @foreach (var piece in _board.CapturedPieces)
             {
-                <span class="piece">@piece.GetSymbol()</span>
+                <span class="piece mb-2">@piece.GetSymbol()</span>
             }
         </div>
     </div>
@@ -110,9 +111,10 @@
     private static int _blackPoints;
     private static List<(int, int)> _moveToPositions = [];
     private static List<(int, int)> _capturePositions = [];
+    private static List<string> _algebraicHistory = [];
     private static bool _isWhiteTurn = true;
-    private static bool _moveMode;
-    private static bool _gameOver;
+    private static bool _moveMode = false;
+    private static bool _gameOver = false;
 
     /// <summary>
     /// Handles a chess-tile-clicked event. The user could be either considering which moves to take for a piece
@@ -125,15 +127,18 @@
         if (!_moveMode) // User wants to check the movability of the piece
         {
             if (!_board.IsOccupied(row, col)) return; // Only piece can move
-            (_moveToPositions, _capturePositions) = _board.ValidNextPositions(row, col, _isWhiteTurn);
+            if (_board.IsWhite(row, col) != _isWhiteTurn) return; // Only the player's pieces can move
+            (_moveToPositions, _capturePositions) = _board.ValidNextPositions(row, col);
             if (_moveToPositions.Count == 0 && _capturePositions.Count == 0) return; // No valid move to make
             (_prevRow, _prevCol) = (row, col);
             _moveMode = true;
         }
         else // User decides to move the piece, enter here guaranteed populated list(s) of moves
         {
+            var turnSymbol = _isWhiteTurn ? "□" : "●";
             if (_moveToPositions.Contains((row, col)))
             {
+                _algebraicHistory.Add(turnSymbol + _board.MoveToLongAlgebraic(_prevRow, _prevCol, row, col, false));
                 _board.PlacePiece(_board.RemovePiece(_prevRow, _prevCol), row, col);
                 if (_board.GetIfIsPawn(row, col) is { } pawn1) pawn1.IsFirstMove = false;
                 _isWhiteTurn = !_isWhiteTurn;
@@ -141,6 +146,7 @@
             else if (_capturePositions.Contains((row, col)))
             {
                 // Only reach here if an enemy piece is present, i.e., clicked square, by designed, has it
+                _algebraicHistory.Add(turnSymbol + _board.MoveToLongAlgebraic(_prevRow, _prevCol, row, col, true));
                 var captured = _board.RemovePiece(row, col)!;
                 _gameOver = captured is King;
                 _board.CapturedPieces.Add(captured);
@@ -148,10 +154,11 @@
                 if (_board.GetIfIsPawn(row, col) is { } pawn1) pawn1.IsFirstMove = false;
                 _isWhiteTurn = !_isWhiteTurn;
             }
-            // If all conditions above are not met, the user clicks away to try another piece
+            // If all conditions above are not met, the user may have clicked away to try moving another piece
+            _moveMode = false;
+            // Clear the move and capture positions to stop rendering those
             _moveToPositions.Clear();
             _capturePositions.Clear();
-            _moveMode = false;
         }
     }
 
@@ -162,5 +169,10 @@
     {
         _board = new Board();
         _isWhiteTurn = true;
+        _moveMode = false;
+        _gameOver = false;
+        _moveToPositions.Clear();
+        _capturePositions.Clear();
+        _algebraicHistory.Clear();
     }
 }

@@ -25,7 +25,7 @@ public class Board
     /// <summary>
     /// List of pieces that have been captured by both sides
     /// </summary>
-    public List<Piece> CapturedPieces { get; } = new();
+    public List<Piece> CapturedPieces { get; } = [];
     /// <summary>
     /// The 2D Tile array which is the board itself
     /// </summary>
@@ -38,12 +38,8 @@ public class Board
     {
         // Clear board
         for (var i = 0; i < Rows; i++)
-        {
             for (var j = 0; j < Cols; j++)
-            {
                 _board[i, j] = new Tile(i, j);
-            }
-        }
         
         // Black side
         PlacePiece(new Rook(false), 0, 0);
@@ -54,10 +50,7 @@ public class Board
         PlacePiece(new Bishop(false), 0, 5);
         PlacePiece(new Knight(false), 0, 6);
         PlacePiece(new Rook(false), 0, 7);
-        for (var i = 0; i < Cols; i++)
-        {
-            PlacePiece(new Pawn(false), 1, i);
-        }
+        for (var i = 0; i < Cols; i++) PlacePiece(new Pawn(false), 1, i);
         
         // White side
         PlacePiece(new Rook(true), 7, 0);
@@ -68,10 +61,7 @@ public class Board
         PlacePiece(new Bishop(true), 7, 5);
         PlacePiece(new Knight(true), 7, 6);
         PlacePiece(new Rook(true), 7, 7);
-        for (var i = 0; i < Cols; i++)
-        {
-            PlacePiece(new Pawn(true), 6, i);
-        }
+        for (var i = 0; i < Cols; i++) PlacePiece(new Pawn(true), 6, i);
     }
 
     /// <summary>
@@ -97,25 +87,44 @@ public class Board
         _board[x, y].Piece = null;
         return piece;
     }
+    
+    /// <summary>
+    /// Translate movement to chess long algebraic notation
+    /// </summary>
+    /// <param name="x">The x-offset of the inquired piece (must guarantee to exist)</param>
+    /// <param name="y">The y-offset of the inquired piece (must guarantee to exist)</param>
+    /// <param name="destX">The x-offset of the destination tile</param>
+    /// <param name="destY">The y-offset of the destination tile</param>
+    /// <param name="isCapture">True if the move is a capture; false otherwise</param>
+    /// <returns>The chess algebraic notation of the move</returns>
+    public string MoveToLongAlgebraic(int x, int y, int destX, int destY, bool isCapture)
+    {
+        var pieceChar = _board[x, y].Piece! switch
+        {
+            King => 'K',
+            Queen => 'Q',
+            Rook => 'R',
+            Bishop => 'B',
+            Knight => 'N',
+            Pawn => 'P',
+            _ => throw new NotImplementedException(),
+        };
+        return $"{pieceChar}{(char)('a' + y)}{(char)('1' + x)}{(isCapture ? "x" : "-")}{(char)('a' + destY)}{(char)('1' + destX)}";
+    }
 
     /// <summary>
     /// Provide an interface with the UI/Controller to retrieve the valid positions from a piece's location
     /// </summary>
     /// <param name="x">The x-offset of the inquired piece (must guarantee to exist)</param>
     /// <param name="y">The y-offset of the inquired piece (must guarantee to exist)</param>
-    /// <param name="isWhiteTurn">Client caller can only see their own piece's moves</param>
     /// <returns>A list of passable destinations and capturable destinations; mutually disjunctive</returns>
-    public (List<(int, int)>, List<(int, int)>) ValidNextPositions(int x, int y, bool isWhiteTurn)
+    public (List<(int, int)>, List<(int, int)>) ValidNextPositions(int x, int y)
     {
         var (passableTiles, capturableTiles) = _board[x, y].Piece!.ValidMoves(this, x, y);
-        if (IsWhite(x, y) != isWhiteTurn) return ([], []); // Cannot check valid moves of enemy
-        return 
-            (passableTiles
-                    .Select(tile => (tile.X, tile.Y))
-                    .ToList(), 
-            capturableTiles
-                .Select(tile => (tile.X, tile.Y))
-                .ToList());
+        return (
+            passableTiles.Select(tile => (tile.X, tile.Y)).ToList(),
+            capturableTiles.Select(tile => (tile.X, tile.Y)).ToList()
+        );
     }
 
     /// <summary>
@@ -152,10 +161,7 @@ public class Board
 
     public void RemoveKings()
     {
-        foreach (var tile in _board)
-        {
-            if (tile.Piece is King) RemovePiece(tile.X, tile.Y);
-        }
+        foreach (var tile in _board) if (tile.Piece is King) RemovePiece(tile.X, tile.Y);
     }
 }
 
