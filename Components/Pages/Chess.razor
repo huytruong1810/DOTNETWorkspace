@@ -5,8 +5,9 @@
 <PageTitle>Chess</PageTitle>
 
 <style>
+body { background-color: #f0d9b5; margin: auto; }
 ul { list-style: none; }
-li { display: inline-block; margin-right: 10px; }
+li { display: inline-block; margin-right: 2em; }
 .chess-board { display: inline-block; }
 .flex-row { display: flex; align-items: center; justify-content: center; }
 .board-cell {
@@ -21,16 +22,16 @@ li { display: inline-block; margin-right: 10px; }
 .light-square:hover { opacity: 1; }
 .dark-square { background-color: #b58863; opacity: 0.9; } 
 .dark-square:hover { opacity: 1; }
-.valid-move { border: .25em green inset; opacity: 0.8; } 
+.valid-move { border: .25em rgb(95, 170, 95) inset; opacity: 0.8; } 
 .valid-move:hover { opacity: 0.9; }
-.valid-capture { border: .25em red inset; opacity: 0.8; } 
+.valid-capture { border: .25em rgb(170, 95, 95) inset; opacity: 0.8; } 
 .valid-capture:hover { opacity: 0.9; }
 .piece { font-size: 2em; }
 </style>
 
 <div class="container text-center">
     <div class="row">
-        <button class="btn btn-lg btn-block btn-light" @onclick="ResetGame">Reset Game</button>
+        <button class="btn btn-outline-dark" @onclick="ResetGame">⟳</button>
         @if (_gameOver)
         {
             _board.RemoveKings();
@@ -44,8 +45,7 @@ li { display: inline-block; margin-right: 10px; }
                 _whitePoints++;
                 <p>□ +1</p>
             }
-            <p class="text-body-secondary">click ^ for a fresh board, you can keep playing this board but it won't affect points</p>
-
+            <p class="text-body-secondary">click ⟳ for a fresh board, you can keep playing this board but it won't affect points</p>
             _gameOver = false;
         }
         else
@@ -55,15 +55,15 @@ li { display: inline-block; margin-right: 10px; }
             {
                 <li class="text-body-secondary">@move</li>
             }
-            <li style="font-size: 2em;">@(_isWhiteTurn ? "□" : "●")</li>
+            <li class="piece">@(_isWhiteTurn ? "□" : "●")</li>
             </ul>
         }
     </div>
     
     <div class="row">
         <div class="col-2">
-            <h3 class="display-6">□ @_whitePoints</h3>
-            <h3 class="display-6">● @_blackPoints</h3>
+            <p class="piece">□ @_whitePoints</p>
+            <p class="piece">● @_blackPoints</p>
         </div>
 
         <div class="col-8 chess-board">
@@ -73,17 +73,13 @@ li { display: inline-block; margin-right: 10px; }
                     @for (var col = 0; col < Board.Cols; col++)
                     {
                         var squareColor = (row + col) % 2 == 0 ? "light-square" : "dark-square";
-                        var highlightClass =
-                            _moveToPositions is not null && _capturePositions is not null
-                                ? _moveToPositions.Contains((row, col))
-                                    ? "valid-move"
-                                    : _capturePositions.Contains((row, col))
-                                        ? "valid-capture"
-                                        : ""
-                                : "";
+                        var highlightClass = _moveToPositions.Contains((row, col)) 
+                        ? "valid-move" : _capturePositions.Contains((row, col))
+                        ? "valid-capture" : "";
                         var row1 = row;
                         var col1 = col;
-                        <div class="board-cell @squareColor @highlightClass" @onclick="() => OnSquareClick(row1, col1)">
+                        <div style="pointer-events:@(_promotingPawnPos is null ? "auto" : "none")" 
+                        class="board-cell @squareColor @highlightClass" @onclick="() => OnSquareClick(row1, col1)">
                             @if (_board.IsOccupied(row, col))
                             {
                                 <span class="piece">@_board.Symbol(row, col)</span>
@@ -94,7 +90,28 @@ li { display: inline-block; margin-right: 10px; }
             }
         </div>
 
-        <div class="col-2 d-flex flex-column align-items-center">
+        <div class="col-1">
+            @if (_promotingPawnPos is not null)
+            {
+                <div class="d-flex flex-column mb-3">
+                    <label class="piece">@(_isWhiteTurn ? '♟' : '♙')🡅</label>
+                    @foreach (var piece in new[] { _isWhiteTurn ? '♜' : '♖', _isWhiteTurn ? '♝' : '♗', _isWhiteTurn ? '♛' : '♕', _isWhiteTurn ? '♞' : '♘' })
+                    {
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input"
+                                    type="radio"
+                                    id="promoteTo@piece"
+                                    value="@piece"
+                                    @onchange="() 
+                                    => { _board.PromotePawn(_promotingPawnPos.Value.row, _promotingPawnPos.Value.col, piece); _promotingPawnPos = null; }" />
+                            <label class="form-check-label piece" for="promoteTo@piece">@piece</label>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="col-1 d-flex flex-column align-items-center">
             @foreach (var piece in _board.CapturedPieces)
             {
                 <span class="piece mb-2">@piece.GetSymbol()</span>
@@ -105,16 +122,36 @@ li { display: inline-block; margin-right: 10px; }
 
 @code {
     private static Board _board = new();
-    private static int _prevRow;
-    private static int _prevCol;
+    private static (int row, int col)? _prevPos;
+    private static (int row, int col)? _promotingPawnPos;
     private static int _whitePoints;
     private static int _blackPoints;
-    private static List<(int, int)> _moveToPositions = [];
-    private static List<(int, int)> _capturePositions = [];
+    private static HashSet<(int, int)> _moveToPositions = [];
+    private static HashSet<(int, int)> _capturePositions = [];
     private static List<string> _algebraicHistory = [];
     private static bool _isWhiteTurn = true;
     private static bool _moveMode = false;
     private static bool _gameOver = false;
+
+    /// <summary>
+    /// Register the move made by the player. This includes removing the piece from its previous position
+    /// and placing it in the new position. If the piece is a pawn, check if it is promotable
+    /// </summary>
+    /// <param name="prevRow">x-offset of the previous position</param>
+    /// <param name="prevCol">y-offset of the previous position</param>
+    /// <param name="row">x-offset of the new position</param>
+    /// <param name="col">y-offset of the new position</param>
+    private void RegisterMove(int prevRow, int prevCol, int row, int col) 
+    {
+        _board.PlacePiece(_board.RemovePiece(prevRow, prevCol), row, col);
+        if (_board.GetIfIsPawn(row, col) is { } pawn1) {
+            pawn1.IsFirstMove = false;
+            if (_board.PawnIsPromotable(row, col)) {
+                _promotingPawnPos = (row, col);
+            }
+        }
+        _isWhiteTurn = !_isWhiteTurn;
+    }
 
     /// <summary>
     /// Handles a chess-tile-clicked event. The user could be either considering which moves to take for a piece
@@ -130,36 +167,33 @@ li { display: inline-block; margin-right: 10px; }
             if (_board.IsWhite(row, col) != _isWhiteTurn) return; // Only the player's pieces can move
             (_moveToPositions, _capturePositions) = _board.ValidNextPositions(row, col);
             if (_moveToPositions.Count == 0 && _capturePositions.Count == 0) return; // No valid move to make
-            (_prevRow, _prevCol) = (row, col);
+            _prevPos = (row, col);
             _moveMode = true;
+            return; // User is now in move mode
         }
-        else // User decides to move the piece, enter here guaranteed populated list(s) of moves
+        
+        // User decides to move the piece, enter here guaranteed populated list(s) of moves
+        var turnSymbol = _isWhiteTurn ? "□" : "●";
+        var (prevRow, prevCol) = _prevPos!.Value;
+        if (_moveToPositions.Contains((row, col)))
         {
-            var turnSymbol = _isWhiteTurn ? "□" : "●";
-            if (_moveToPositions.Contains((row, col)))
-            {
-                _algebraicHistory.Add(turnSymbol + _board.MoveToLongAlgebraic(_prevRow, _prevCol, row, col, false));
-                _board.PlacePiece(_board.RemovePiece(_prevRow, _prevCol), row, col);
-                if (_board.GetIfIsPawn(row, col) is { } pawn1) pawn1.IsFirstMove = false;
-                _isWhiteTurn = !_isWhiteTurn;
-            }
-            else if (_capturePositions.Contains((row, col)))
-            {
-                // Only reach here if an enemy piece is present, i.e., clicked square, by designed, has it
-                _algebraicHistory.Add(turnSymbol + _board.MoveToLongAlgebraic(_prevRow, _prevCol, row, col, true));
-                var captured = _board.RemovePiece(row, col)!;
-                _gameOver = captured is King;
-                _board.CapturedPieces.Add(captured);
-                _board.PlacePiece(_board.RemovePiece(_prevRow, _prevCol), row, col);
-                if (_board.GetIfIsPawn(row, col) is { } pawn1) pawn1.IsFirstMove = false;
-                _isWhiteTurn = !_isWhiteTurn;
-            }
-            // If all conditions above are not met, the user may have clicked away to try moving another piece
-            _moveMode = false;
-            // Clear the move and capture positions to stop rendering those
-            _moveToPositions.Clear();
-            _capturePositions.Clear();
+            _algebraicHistory.Add(turnSymbol + _board.MoveToLongAlgebraic(prevRow, prevCol, row, col, false));
+            RegisterMove(prevRow, prevCol, row, col);
         }
+        else if (_capturePositions.Contains((row, col)))
+        {
+            // Only reach here if an enemy piece is present, i.e., clicked square, by designed, has it
+            _algebraicHistory.Add(turnSymbol + _board.MoveToLongAlgebraic(prevRow, prevCol, row, col, true));
+            var captured = _board.RemovePiece(row, col)!;
+            _gameOver = captured is King;
+            _board.CapturedPieces.Add(captured);
+            RegisterMove(prevRow, prevCol, row, col);
+        }
+        // If all conditions above are not met, the user may have clicked away to try moving another piece
+        _moveMode = false;
+        // Clear the move and capture positions to stop rendering those
+        _moveToPositions.Clear();
+        _capturePositions.Clear();
     }
 
     /// <summary>
@@ -171,6 +205,8 @@ li { display: inline-block; margin-right: 10px; }
         _isWhiteTurn = true;
         _moveMode = false;
         _gameOver = false;
+        _prevPos = null;
+        _promotingPawnPos = null;
         _moveToPositions.Clear();
         _capturePositions.Clear();
         _algebraicHistory.Clear();

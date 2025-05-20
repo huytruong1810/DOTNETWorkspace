@@ -87,6 +87,25 @@ public class Board
         _board[x, y].Piece = null;
         return piece;
     }
+
+    /// <summary>
+    /// Let Pawn be promoted to a new piece
+    /// </summary>
+    /// <param name="x">The x-offset of the pawn (must guarantee to be a pawn)</param>
+    /// <param name="y">The y-offset of the pawn (must guarantee to be a pawn)</param>
+    /// <param name="pieceChar">The character symbol of the new piece</param>
+    public void PromotePawn(int x, int y, char pieceChar)
+    {
+        var pawn = RemovePiece(x, y)!; // Remove the pawn
+        PlacePiece(pieceChar switch
+        {
+            '♕' or '♛' => new Queen(pawn.IsWhite),
+            '♖' or '♜' => new Rook(pawn.IsWhite),
+            '♗' or '♝' => new Bishop(pawn.IsWhite),
+            '♘' or '♞' => new Knight(pawn.IsWhite),
+            _ => throw new NotImplementedException(),
+        }, x, y);
+    }
     
     /// <summary>
     /// Translate movement to chess long algebraic notation
@@ -118,12 +137,12 @@ public class Board
     /// <param name="x">The x-offset of the inquired piece (must guarantee to exist)</param>
     /// <param name="y">The y-offset of the inquired piece (must guarantee to exist)</param>
     /// <returns>A list of passable destinations and capturable destinations; mutually disjunctive</returns>
-    public (List<(int, int)>, List<(int, int)>) ValidNextPositions(int x, int y)
+    public (HashSet<(int, int)>, HashSet<(int, int)>) ValidNextPositions(int x, int y)
     {
         var (passableTiles, capturableTiles) = _board[x, y].Piece!.ValidMoves(this, x, y);
         return (
-            passableTiles.Select(tile => (tile.X, tile.Y)).ToList(),
-            capturableTiles.Select(tile => (tile.X, tile.Y)).ToList()
+            passableTiles.Select(tile => (tile.X, tile.Y)).ToHashSet(),
+            capturableTiles.Select(tile => (tile.X, tile.Y)).ToHashSet()
         );
     }
 
@@ -159,6 +178,17 @@ public class Board
     /// <returns>Reference to the pawn; can be null</returns>
     public Pawn? GetIfIsPawn(int x, int y) => _board[x, y].Piece as Pawn;
 
+    /// <summary>
+    /// Check if a pawn is promotable
+    /// </summary>
+    /// <param name="x">The x-offset of the inquired pawn (must guarantee to be a pawn)</param>
+    /// <param name="y">The y-offset of the inquired pawn (must guarantee to be a pawn)</param>
+    /// <returns>True if the pawn is promotable; false otherwise</returns>
+    public bool PawnIsPromotable(int x, int y) => _board[x, y].Piece!.IsWhite ? x == 0 : x == Rows - 1;
+
+    /// <summary>
+    /// Remove all kings from the board
+    /// </summary>
     public void RemoveKings()
     {
         foreach (var tile in _board) if (tile.Piece is King) RemovePiece(tile.X, tile.Y);
@@ -185,7 +215,7 @@ public abstract class Piece(bool isWhite)
     /// <param name="x">x-offset of this piece on the board</param>
     /// <param name="y">y-offset of this piece on the board</param>
     /// <returns>A list of passable tiles and capturable tiles; mutually disjunctive</returns>
-    public abstract (List<Tile>, List<Tile>) ValidMoves(Board board, int x, int y);
+    public abstract (HashSet<Tile>, HashSet<Tile>) ValidMoves(Board board, int x, int y);
 
     /// <summary>
     /// Add inplace to the list of capturable tiles, i.e., the given location is occupied by an enemy piece
@@ -194,7 +224,7 @@ public abstract class Piece(bool isWhite)
     /// <param name="tiles">Reference to the list of capturable tiles to be updated</param>
     /// <param name="x">The x-offset of the inquired piece; can be null, e.g., from pawn's caller context</param>
     /// <param name="y">The y-offset of the inquired piece; can be null, e.g., from pawn's caller context</param>
-    protected void TryAddCapture(Board board, List<Tile> tiles, int x, int y)
+    protected void TryAddCapture(Board board, HashSet<Tile> tiles, int x, int y)
     {
         if (!InBorders(x, y)) return; // For pawn case
         if (!board.IsOccupied(x, y)) return; // For pawn case
@@ -223,8 +253,8 @@ public abstract class Piece(bool isWhite)
     /// -1 means unrestricted number of steps</param>
     protected void SlideAdd(
         Board board, 
-        List<Tile> passableTiles, 
-        List<Tile>? capturableTiles, 
+        HashSet<Tile> passableTiles, 
+        HashSet<Tile>? capturableTiles, 
         int x,
         int y,
         int dx,
@@ -256,7 +286,7 @@ public abstract class Piece(bool isWhite)
     /// <param name="x">The x-offset of the inquired piece; can be null</param>
     /// <param name="y">The y-offset of the inquired piece; can be null</param>
     /// <param name="maxSteps">Number of increments to perform before hitting obstructions</param>
-    protected void AddDiagonals(Board board, List<Tile> passableTiles, List<Tile> capturableTiles, int x, int y, int maxSteps) 
+    protected void AddDiagonals(Board board, HashSet<Tile> passableTiles, HashSet<Tile> capturableTiles, int x, int y, int maxSteps) 
     {
         SlideAdd(board, passableTiles, capturableTiles, x, y, -1, -1, maxSteps); // North-west
         SlideAdd(board, passableTiles, capturableTiles, x, y, -1, 1, maxSteps); // North-east
@@ -273,7 +303,7 @@ public abstract class Piece(bool isWhite)
     /// <param name="x">The x-offset of the inquired piece; can be null</param>
     /// <param name="y">The y-offset of the inquired piece; can be null</param>
     /// <param name="maxSteps">Number of increments to perform before hitting obstructions</param>
-    protected void AddCardinals(Board board, List<Tile> passableTiles, List<Tile> capturableTiles, int x, int y, int maxSteps)
+    protected void AddCardinals(Board board, HashSet<Tile> passableTiles, HashSet<Tile> capturableTiles, int x, int y, int maxSteps)
     {
         SlideAdd(board, passableTiles, capturableTiles, x, y, -1, 0, maxSteps); // North
         SlideAdd(board, passableTiles, capturableTiles, x, y, 0, -1, maxSteps); // West
@@ -301,10 +331,10 @@ public class King(bool isWhite) : Piece(isWhite)
     /// <param name="x">x-offset of this King</param>
     /// <param name="y">y-offset of this King</param>
     /// <returns>A list of passable tiles and capturable tiles; mutually disjunctive</returns>
-    public override (List<Tile>, List<Tile>) ValidMoves(Board board, int x, int y)
+    public override (HashSet<Tile>, HashSet<Tile>) ValidMoves(Board board, int x, int y)
     {
-        List<Tile> passableTiles = [];
-        List<Tile> capturableTiles = [];
+        HashSet<Tile> passableTiles = [];
+        HashSet<Tile> capturableTiles = [];
         AddCardinals(board, passableTiles, capturableTiles, x, y, 1);
         AddDiagonals(board, passableTiles, capturableTiles, x, y, 1);
         return (passableTiles, capturableTiles);
@@ -330,10 +360,10 @@ public class Queen(bool isWhite) : Piece(isWhite)
     /// <param name="x">x-offset of this Queen</param>
     /// <param name="y">y-offset of this Queen</param>
     /// <returns>A list of passable tiles and capturable tiles; mutually disjunctive</returns>
-    public override (List<Tile>, List<Tile>) ValidMoves(Board board, int x, int y)
+    public override (HashSet<Tile>, HashSet<Tile>) ValidMoves(Board board, int x, int y)
     {
-        List<Tile> passableTiles = [];
-        List<Tile> capturableTiles = [];
+        HashSet<Tile> passableTiles = [];
+        HashSet<Tile> capturableTiles = [];
         AddCardinals(board, passableTiles, capturableTiles, x, y, -1);
         AddDiagonals(board, passableTiles, capturableTiles, x, y, -1);
         return (passableTiles, capturableTiles);
@@ -359,10 +389,10 @@ public class Bishop(bool isWhite) : Piece(isWhite)
     /// <param name="x">x-offset of this Bishop</param>
     /// <param name="y">y-offset of this Bishop</param>
     /// <returns>A list of passable tiles and capturable tiles; mutually disjunctive</returns>
-    public override (List<Tile>, List<Tile>) ValidMoves(Board board, int x, int y)
+    public override (HashSet<Tile>, HashSet<Tile>) ValidMoves(Board board, int x, int y)
     {
-        List<Tile> passableTiles = [];
-        List<Tile> capturableTiles = [];
+        HashSet<Tile> passableTiles = [];
+        HashSet<Tile> capturableTiles = [];
         AddDiagonals(board, passableTiles, capturableTiles, x, y, -1);
         return (passableTiles, capturableTiles);
     }
@@ -387,10 +417,10 @@ public class Rook(bool isWhite) : Piece(isWhite)
     /// <param name="x">x-offset of this Rook</param>
     /// <param name="y">y-offset of this Rook</param>
     /// <returns>A list of passable tiles and capturable tiles; mutually disjunctive</returns>
-    public override (List<Tile>, List<Tile>) ValidMoves(Board board, int x, int y)
+    public override (HashSet<Tile>, HashSet<Tile>) ValidMoves(Board board, int x, int y)
     {
-        List<Tile> passableTiles = [];
-        List<Tile> capturableTiles = [];
+        HashSet<Tile> passableTiles = [];
+        HashSet<Tile> capturableTiles = [];
         AddCardinals(board, passableTiles, capturableTiles, x, y, -1);
         return (passableTiles, capturableTiles);
     }
@@ -415,10 +445,10 @@ public class Knight(bool isWhite) : Piece(isWhite)
     /// <param name="x">x-offset of this Knight</param>
     /// <param name="y">y-offset of this Knight</param>
     /// <returns>A list of passable tiles and capturable tiles; mutually disjunctive</returns>
-    public override (List<Tile>, List<Tile>) ValidMoves(Board board, int x, int y)
+    public override (HashSet<Tile>, HashSet<Tile>) ValidMoves(Board board, int x, int y)
     {
-        List<Tile> passableTiles = [];
-        List<Tile> capturableTiles = [];
+        HashSet<Tile> passableTiles = [];
+        HashSet<Tile> capturableTiles = [];
         SlideAdd(board, passableTiles, capturableTiles, x, y, -2, -1, 1);
         SlideAdd(board, passableTiles, capturableTiles, x, y, -1, -2, 1);
         SlideAdd(board, passableTiles, capturableTiles, x, y, 2, -1, 1);
@@ -441,6 +471,7 @@ public class Pawn(bool isWhite) : Piece(isWhite)
     /// Tracks pawn's first move because they can move 2 steps instead of 1 if it is
     /// </summary>
     public bool IsFirstMove { get; set; } = true;
+    
     /// <summary>
     /// Pawn's symbol
     /// </summary>
@@ -454,10 +485,10 @@ public class Pawn(bool isWhite) : Piece(isWhite)
     /// <param name="x">x-offset of this Pawn</param>
     /// <param name="y">y-offset of this Pawn</param>
     /// <returns>A list of passable tiles and capturable tiles; mutually disjunctive</returns>
-    public override (List<Tile>, List<Tile>) ValidMoves(Board board, int x, int y)
+    public override (HashSet<Tile>, HashSet<Tile>) ValidMoves(Board board, int x, int y)
     {
-        List<Tile> passableTiles = [];
-        List<Tile> capturableTiles = [];
+        HashSet<Tile> passableTiles = [];
+        HashSet<Tile> capturableTiles = [];
         if (IsWhite) // White pawns only go north and cannot capture in the direction of movement
         {
             SlideAdd(board, passableTiles, null, x, y, -1, 0, IsFirstMove ? 2 : 1);
@@ -473,4 +504,3 @@ public class Pawn(bool isWhite) : Piece(isWhite)
         return (passableTiles, capturableTiles);
     }
 }
-
