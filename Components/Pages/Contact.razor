@@ -3,13 +3,13 @@
 
 <PageTitle>Contact</PageTitle>
 
-<p><em>Found @_people.Count people in contact</em></p>
+<p><em>Found @People.Count people in contact</em></p>
 
 <form>
     <input type="text" placeholder="Andy"  @bind="NewPerson.Firstname"/>
     <input type="text" placeholder="Johnson"  @bind="NewPerson.Lastname"/>
-    <input type="text" placeholder="aj1999@gmail.com"  @bind="NewPerson.Email"/>
-    <button type="submit" @onclick="() => { NewPerson.Id = _id; _people.Add(NewPerson); _id++; }">Add</button>
+    <input type="text" placeholder="andyj123@gmail.com"  @bind="NewPerson.Email"/>
+    <button type="submit" @onclick="() => { NewPerson.Id = _id; People.Add(NewPerson); _id++; }">Add</button>
 </form>
 
 <table class="table">
@@ -22,14 +22,14 @@
     </tr>
     </thead>
     <tbody>
-    @foreach (var person in _people)
+    @foreach (var person in People)
     {
         <tr>
             <td>@person.Id</td>
             <td>@person.Firstname</td>
             <td>@person.Lastname</td>
             <td>@person.Email</td>
-            <button @onclick="() => _people.Remove(_people.First(v => v.Id == person.Id))">🗙</button>
+            <button @onclick="() => People.Remove(People.First(v => v.Id == person.Id))">🗙</button>
         </tr>
     }
     </tbody>
@@ -37,9 +37,9 @@
 
 @code {
 
-    private static int _id = 0;
+    private static int _id;
     
-    private static List<Person> _people = new();
+    private static readonly List<Person> People = [];
     
     private Person NewPerson { get; } = new();
 

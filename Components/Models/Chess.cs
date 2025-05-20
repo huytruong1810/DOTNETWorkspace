@@ -149,6 +149,14 @@ public class Board
     /// <param name="y">The y-offset of the inquired piece</param>
     /// <returns>Reference to the pawn; can be null</returns>
     public Pawn? GetIfIsPawn(int x, int y) => _board[x, y].Piece as Pawn;
+
+    public void RemoveKings()
+    {
+        foreach (var tile in _board)
+        {
+            if (tile.Piece is King) RemovePiece(tile.X, tile.Y);
+        }
+    }
 }
 
 /// <summary>
