@@ -1,0 +1,42 @@
+@page "/people"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using DOTNETWorkspace.Models
+@using DOTNETWorkspace.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<DOTNETWorkspace.Data.PeopleContext> DbFactory
+
+<PageTitle>Index</PageTitle>
+
+<style>
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { border: 1px solid #ddd; padding: 8px; }
+    .table th { background-color: #f2f2f2; text-align: left; }
+    a { text-decoration: none; color: inherit; }
+</style>
+
+<p><a href="people/create">+</a></p>
+
+<QuickGrid Class="table" Items="context.Person">
+    <PropertyColumn Property="person => person.FirstName" />
+    <PropertyColumn Property="person => person.LastName" />
+    <PropertyColumn Property="person => person.Email" />
+    <PropertyColumn Property="person => person.PhoneNumber" />
+
+    <TemplateColumn Context="person">
+        <a href="@($"people/edit?id={person.Id}")">✎</a> |
+        <a href="@($"people/details?id={person.Id}")">🔎︎</a> |
+        <a href="@($"people/delete?id={person.Id}")">🗙</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private PeopleContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

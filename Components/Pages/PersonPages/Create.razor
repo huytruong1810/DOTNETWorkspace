@@ -1,0 +1,67 @@
+@page "/people/create"
+@using Microsoft.EntityFrameworkCore
+@using DOTNETWorkspace.Models
+@inject IDbContextFactory<DOTNETWorkspace.Data.PeopleContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<style>
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { border: 1px solid #ddd; padding: 8px; }
+    .table th { background-color: #f2f2f2; text-align: left; }
+    a { text-decoration: none; color: inherit; }
+</style>
+
+<div style="display: flex; align-items: center; gap: 0.5em;">
+    <h1 style="margin: 0;">+</h1>
+    <h2 style="margin: 0;">👤</h2>
+</div>
+
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Person" OnValidSubmit="AddPerson" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            <div class="mb-3">
+                <label for="firstname" class="form-label">FirstName:</label> 
+                <InputText id="firstname" @bind-Value="Person.FirstName" class="form-control" aria-required="true"/> 
+                <ValidationMessage For="() => Person.FirstName" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="lastname" class="form-label">LastName:</label> 
+                <InputText id="lastname" @bind-Value="Person.LastName" class="form-control" aria-required="true"/> 
+                <ValidationMessage For="() => Person.LastName" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="email" class="form-label">Email:</label> 
+                <InputText id="email" @bind-Value="Person.Email" class="form-control" aria-required="true"/> 
+                <ValidationMessage For="() => Person.Email" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="phonenumber" class="form-label">PhoneNumber:</label> 
+                <InputText id="phonenumber" @bind-Value="Person.PhoneNumber" class="form-control" aria-required="true"/> 
+                <ValidationMessage For="() => Person.PhoneNumber" class="text-danger" /> 
+            </div>        
+            <button type="submit" class="btn btn-outline-light">💾</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/people">⮐</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Person Person { get; set; } = new();
+
+    private async Task AddPerson()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Person.Add(Person);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/people");
+    }
+}

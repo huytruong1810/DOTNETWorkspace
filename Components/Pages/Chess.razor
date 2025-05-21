@@ -1,32 +1,32 @@
 @page "/Chess"
-@using DOTNETWorkspace.Components.Models
+@using DOTNETWorkspace.Models
 @rendermode InteractiveServer
 
 <PageTitle>Chess</PageTitle>
 
 <style>
-body { background-color: #f0d9b5; margin: auto; }
-ul { list-style: none; }
-li { display: inline-block; margin-right: 2em; }
-.chess-board { display: inline-block; }
-.flex-row { display: flex; align-items: center; justify-content: center; }
-.board-cell {
-    width: 3em;
-    height: 3em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-.light-square { background-color: #f0d9b5; opacity: 0.9; } 
-.light-square:hover { opacity: 1; }
-.dark-square { background-color: #b58863; opacity: 0.9; } 
-.dark-square:hover { opacity: 1; }
-.valid-move { border: .25em rgb(95, 170, 95) inset; opacity: 0.8; } 
-.valid-move:hover { opacity: 0.9; }
-.valid-capture { border: .25em rgb(170, 95, 95) inset; opacity: 0.8; } 
-.valid-capture:hover { opacity: 0.9; }
-.piece { font-size: 2em; }
+    body { background-color: #f0d9b5; margin: auto; font-family: Consolas, monospace; color: black; }
+    ul { list-style: none; }
+    li { display: inline-block; margin-right: 2em; }
+    .chess-board { display: inline-block; }
+    .flex-row { display: flex; align-items: center; justify-content: center; }
+    .board-cell {
+        width: 3em;
+        height: 3em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+    .light-square { background-color: #f0d9b5; opacity: 0.9; } 
+    .light-square:hover { opacity: 1; }
+    .dark-square { background-color: #b58863; opacity: 0.9; } 
+    .dark-square:hover { opacity: 1; }
+    .valid-move { border: .25em rgb(95, 170, 95) inset; opacity: 0.8; } 
+    .valid-move:hover { opacity: 0.9; }
+    .valid-capture { border: .25em rgb(170, 95, 95) inset; opacity: 0.8; } 
+    .valid-capture:hover { opacity: 0.9; }
+    .piece { font-size: 2em; }
 </style>
 
 <div class="container text-center">
@@ -70,16 +70,19 @@ li { display: inline-block; margin-right: 2em; }
             @for (var row = 0; row < Board.Rows; row++)
             {
                 <div class="flex-row">
+                    <div style="width: 2em; text-align: right; font-weight: bold; padding-right: 2em;">
+                        @(Board.Rows - row)
+                    </div>
                     @for (var col = 0; col < Board.Cols; col++)
                     {
                         var squareColor = (row + col) % 2 == 0 ? "light-square" : "dark-square";
                         var highlightClass = _moveToPositions.Contains((row, col)) 
-                        ? "valid-move" : _capturePositions.Contains((row, col))
-                        ? "valid-capture" : "";
+                            ? "valid-move" : _capturePositions.Contains((row, col))
+                            ? "valid-capture" : "";
                         var row1 = row;
                         var col1 = col;
-                        <div style="pointer-events:@(_promotingPawnPos is null ? "auto" : "none")" 
-                        class="board-cell @squareColor @highlightClass" @onclick="() => OnSquareClick(row1, col1)">
+                        <div style="pointer-events:@(_promotingPawnPos is null ? "auto" : "none")"
+                             class="board-cell @squareColor @highlightClass" @onclick="() => OnSquareClick(row1, col1)">
                             @if (_board.IsOccupied(row, col))
                             {
                                 <span class="piece">@_board.Symbol(row, col)</span>
@@ -88,6 +91,13 @@ li { display: inline-block; margin-right: 2em; }
                     }
                 </div>
             }
+            <div class="flex-row" style="padding-top: 1.25em;">
+                <div style="width: 2em;"></div>
+                @for (var col = 0; col < Board.Cols; col++)
+                {
+                    <div style="width: 3em; text-align: center; font-weight: bold;">@((char)('a' + col))</div>
+                }
+            </div>
         </div>
 
         <div class="col-1">

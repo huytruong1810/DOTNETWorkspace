@@ -1,0 +1,58 @@
+@page "/people/details"
+@using Microsoft.EntityFrameworkCore
+@using DOTNETWorkspace.Models
+@inject IDbContextFactory<DOTNETWorkspace.Data.PeopleContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<style>
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { border: 1px solid #ddd; padding: 8px; }
+    .table th { background-color: #f2f2f2; text-align: left; }
+    a { text-decoration: none; color: inherit; }
+</style>
+
+<div style="display: flex; align-items: center; gap: 0.5em;">
+    <h1 style="margin: 0;">🔎︎</h1>
+    <h2 style="margin: 0;">👤</h2>
+</div>
+
+<div>
+    <hr />
+    @if (person is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">FirstName</dt>
+            <dd class="col-sm-10">@person.FirstName</dd>
+            <dt class="col-sm-2">LastName</dt>
+            <dd class="col-sm-10">@person.LastName</dd>
+            <dt class="col-sm-2">Email</dt>
+            <dd class="col-sm-10">@person.Email</dd>
+            <dt class="col-sm-2">PhoneNumber</dt>
+            <dd class="col-sm-10">@person.PhoneNumber</dd>
+        </dl>
+        <div>
+            <a href="@($"/people/edit?id={person.Id}")">✎</a> |
+            <a href="@($"/people")">⮐</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Person? person;
+
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        person = await context.Person.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (person is null) NavigationManager.NavigateTo("notfound");
+    }
+}
